@@ -149,11 +149,11 @@ if matrix_source == "generator"
 elseif matrix_source == "file"
     row_gids0 = partition_metis(A, m)
 end
-col_gids0 = cell(1,m)
-gid2proc  = zeros(1,n)
+col_gids0 = Array{Any}(1, m)
+gid2proc  = zeros(Int64, 1, n)
 for I = 1:m
-    col_gids0{I} = construct_cols(A, row_gids0{I})
-    gid2proc(row_gids0{I}) = I
+    col_gids0[I] = construct_cols(A, row_gids0[I])
+    gid2proc[row_gids0[I]] = I
 end
 
 

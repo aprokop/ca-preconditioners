@@ -5,50 +5,50 @@ function partition_manual(A, nxyz, mxyz)
     @assert(dim <= 3)
 
     if dim == 1
-        nxyz = [nxyz(1) 0 0]
-        mxyz = [mxyz(1) 1 1]
+        nxyz = [nxyz[1] 0 0]
+        mxyz = [mxyz[1] 1 1]
     elseif dim == 2
-        nxyz = [nxyz(1) nxyz(2) 0]
-        mxyz = [mxyz(1) mxyz(2) 1]
+        nxyz = [nxyz[1] nxyz[2] 0]
+        mxyz = [mxyz[1] mxyz[2] 1]
     end
     m = prod(mxyz)
 
     row_gids = Array{Any}(1,m)
-    for K = 1:mxyz(3)
-        for J = 1:mxyz(2)
-            for I = 1:mxyz(1)
-                IJK = (K-1)*mxyz(2)*mxyz(1) + (J-1)*mxyz(1) + I
+    for K = 1:mxyz[3]
+        for J = 1:mxyz[2]
+            for I = 1:mxyz[1]
+                IJK = (K-1)*mxyz[2]*mxyz[1] + (J-1)*mxyz[1] + I
 
-                (min_x, max_x) = sub1D_bnd(nxyz(1), mxyz(1), I)
+                (min_x, max_x) = sub1D_bnd(nxyz[1], mxyz[1], I)
 
-                if nxyz(2)
-                    (min_y, max_y) = sub1D_bnd(nxyz(2), mxyz(2), J)
+                if nxyz[2] != 0
+                    (min_y, max_y) = sub1D_bnd(nxyz[2], mxyz[2], J)
                 else
                     min_y = 1
                     max_y = 1
                 end
 
-                if nxyz(3)
-                    (min_z, max_z) = sub1D_bnd(nxyz(3), mxyz(3), K)
+                if nxyz[3] != 0
+                    (min_z, max_z) = sub1D_bnd(nxyz[3], mxyz[3], K)
                 else
                     min_z = 1
                     max_z = 1
                 end
 
                 # Calculate inner part othe subdomain
-                rows = zeros(1, (max_x-min_x+1)*(max_y-min_y+1)*(max_z-min_z+1))
+                rows = zeros(Int64, 1, (max_x-min_x+1)*(max_y-min_y+1)*(max_z-min_z+1))
                 ind  = 1
                 for k = min_z:max_z
                     for j = min_y:max_y
                         for i = min_x:max_x
-                            rows(ind) = (k-1)*nxyz(2)*nxyz(1) +
-                                        (j-1)*nxyz(1) + i
+                            rows(ind) = (k-1)*nxyz[2]*nxyz[1] +
+                                        (j-1)*nxyz[1] + i
                             ind = ind+1
                         end
                     end
                 end
 
-                row_gids{IJK} = rows
+                row_gids[IJK] = rows
             end
         end
     end
@@ -87,18 +87,20 @@ end
 #
 # row_gids = rows
 # end
-#
-# function [col_gids] = construct_cols(A, row_gids)
-# % col_gids is similar to column map
-# % It contains a list of columns with nonzero elements in row_gids rows, and
-# % is ordered so that the part corresponding to row_gids goes first.
-# [~,cols] = find(A(row_gids,:))
-# if size(cols,1) == 1
-    # cols = cols'
-# end
-# col_gids = cat(2, row_gids, setdiff(unique(cols'), row_gids))
-# end
-#
+
+function construct_cols(A, row_gids)
+    # col_gids is similar to column map
+    # It contains a list of columns with nonzero elements in row_gids rows, and
+    # is ordered so that the part corresponding to row_gids goes first.
+    (_, cols) = findn(A[row_gids,:])
+    if size(cols,1) == 1
+        cols = cols'
+    end
+    col_gids = cat(2, row_gids, setdiff(unique(cols'), row_gids))
+
+    return col_gids
+end
+
 # function [neigh] = get_neigh_list(sub_index)
 # global col_gids0
 # global gid2proc
@@ -109,7 +111,7 @@ end
 function sub1D_bnd(n, m, i)
     @assert(i > 0 && i <= m, "Incorrect i value")
 
-    min_width = trunc(double(n)/m)
+    min_width = trunc(Int64, n/m)
     num_wides = n - m*min_width
 
     if i <= num_wides
